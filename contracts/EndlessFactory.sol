@@ -11,23 +11,21 @@ import {EndlessProxy} from "./EndlessProxy.sol";
 contract EndlessFactory is OwnableUpgradeable, UUPSUpgradeable {
 
   address public immutable implementation;
-  address public immutable endlessCreate;
+  address private _endlessCreateAddress;
 
   error AddressCannotBeZero();
   error InvalidCaller();
 
 
   modifier onlyEndlessCreateContract() { 
-    if(_msgSender() != endlessCreate) revert InvalidCaller();
+    if(_msgSender() != _endlessCreateAddress) revert InvalidCaller();
     _; 
   }
 
-  constructor(address _implementation, address _endlessCreate) initializer {
+  constructor(address _implementation) initializer {
     if(_implementation == address(0)) revert AddressCannotBeZero();
-    if(_endlessCreate == address(0)) revert AddressCannotBeZero();
 
     implementation = _implementation;
-    endlessCreate = _endlessCreate;
   }
 
   function initialize() external initializer {
@@ -51,5 +49,11 @@ contract EndlessFactory is OwnableUpgradeable, UUPSUpgradeable {
       _endlessDescription: endlessDescription,
       _initialOwner: initialOwner
     });
-  } 
+  }
+
+  function setEndlessCreateAddress(address endlessCreateAddress) external onlyOwner {
+    if(endlessCreateAddress == address(0)) revert AddressCannotBeZero();
+
+    _endlessCreateAddress = endlessCreateAddress;
+  }
 }

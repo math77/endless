@@ -3,9 +3,10 @@ pragma solidity 0.8.18;
 
 
 import {EndlessFactory} from "./EndlessFactory.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 
-contract EndlessCreate {
+contract EndlessCreate is Ownable {
 
   EndlessFactory private _endlessFactoryAddress;
 
@@ -17,7 +18,7 @@ contract EndlessCreate {
     newEndlessAddress = EndlessFactory(_endlessFactoryAddress).createEndless(endlessName, endlessDescription, initialOwner);
   }
 
-  function setEndlessFactoryAddress(EndlessFactory factoryAddr) external {
+  function setEndlessFactoryAddress(EndlessFactory factoryAddr) external onlyOwner {
     require(address(factoryAddr) != address(0), "CANNOT BE ZERO ADDRESS");
 
     _endlessFactoryAddress = factoryAddr;

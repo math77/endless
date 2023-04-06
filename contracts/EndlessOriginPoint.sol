@@ -2,14 +2,16 @@
 pragma solidity 0.8.18;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import {EndlessCreate} from "./EndlessCreate.sol";
 
 
-contract EndlessOriginPoint is ERC721 {
+contract EndlessOriginPoint is ERC721, ReentrancyGuard, Ownable {
 
   uint256 private _tokenId;
+  uint256 private constant MAX_SUPPLY = 10;
 
   struct EndlessData {
     address owner;
@@ -18,15 +20,18 @@ contract EndlessOriginPoint is ERC721 {
 
   EndlessCreate private _endlessCreateAddress;
 
-  mapping(uint256 tokenId => EndlessData endlessInfo) private _endlessDataToTokenId; 
+  mapping(uint256 tokenId => EndlessData endlessData) private _endlessDataToTokenId; 
 
   error NonexistentToken();
+  error SupplySoldOut();
   
 
-  constructor() ERC721("", "") {}
+  constructor() ERC721("EndlessOriginPoint", "ENDLESSOP") Ownable() {}
 
 
-  function mint() external payable returns (uint256) {
+  function mint() external payable nonReentrant returns (uint256) {
+
+    if(_tokenId == MAX_SUPPLY) revert SupplySoldOut();
 
     unchecked {
       _mint(msg.sender, _tokenId++);
@@ -47,6 +52,10 @@ contract EndlessOriginPoint is ERC721 {
     }
 
     return "";
+  }
+
+  function setEndlessCreateAddress(EndlessCreate endlessCreateAddress) external onlyOwner {
+    _endlessCreateAddress = endlessCreateAddress;
   }
 
 }
