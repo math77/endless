@@ -6,19 +6,17 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-import {IMetadataRenderer} from "./interfaces/IMetadataRenderer.sol";
-
 import {EndlessCreate} from "./EndlessCreate.sol";
+import {EndlessDataStorage} from "./EndlessDataStorage.sol";
 import {OwnableSkeleton} from "./OwnableSkeleton.sol";
 
 
-contract Endless is ERC721Upgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, OwnableSkeleton {
+contract Endless is ERC721Upgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeable, OwnableSkeleton, EndlessDataStorage {
 
   uint256 private _tokenId;
   uint256 private _maxSupply;
 
   EndlessCreate private _endlessCreateAddress;
-  IMetadataRenderer metadataRenderer;
 
   error NonexistentToken();
   error NotContractOwner();
@@ -47,7 +45,7 @@ contract Endless is ERC721Upgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeab
   function _authorizeUpgrade(address _newImplementation) internal override {}
 
 
-  function mint() external nonReentrant returns (uint256) {
+  function mint() external nonReentrant {
 
     if(_tokenId == _maxSupply) revert SupplySoldOut();
 
@@ -56,6 +54,11 @@ contract Endless is ERC721Upgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeab
     }
 
     address endlessAddress = EndlessCreate(_endlessCreateAddress).createNewEndless("", "", _msgSender());
+
+    endlessDataToTokenId[_tokenId] = EndlessData({
+      owner: _msgSender(),
+      endlessAddress: endlessAddress
+    });
   }
 
   function tokenURI(uint256 tokenId) public view override returns (string memory) {
@@ -64,11 +67,26 @@ contract Endless is ERC721Upgradeable, UUPSUpgradeable, ReentrancyGuardUpgradeab
       revert NonexistentToken();
     }
 
-    return metadataRenderer.tokenURI(tokenId);
+    return renderer.tokenURI(tokenId);
   }
 
   function setEndlessCreateAddress(EndlessCreate endlessCreateAddress) external onlyOwner {
     _endlessCreateAddress = endlessCreateAddress;
+  }
+
+  function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 /*batchSize*/) internal virtual override {
+    if(from != address(0)) {
+
+      endlessDataToTokenId[tokenId].owner = to;
+
+      address contractAddr = endlessDataToTokenId[tokenId].endlessAddress;
+
+      Endless(contractAddr).setNewOwner(to);
+    }
+  }
+
+  function setNewOwner(address newOwner) external onlyOwner {
+    _setOwner(newOwner);
   }
 
 }

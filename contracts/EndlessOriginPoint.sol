@@ -5,31 +5,26 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
+import {EndlessDataStorage} from "./EndlessDataStorage.sol";
 import {EndlessCreate} from "./EndlessCreate.sol";
+import {Endless} from "./Endless.sol";
 
 
-contract EndlessOriginPoint is ERC721, ReentrancyGuard, Ownable {
+contract EndlessOriginPoint is ERC721, ReentrancyGuard, Ownable, EndlessDataStorage {
 
   uint256 private _tokenId;
   uint256 private constant MAX_SUPPLY = 10;
 
-  struct EndlessData {
-    address owner;
-    address endlessAddress;
-  }
-
   EndlessCreate private _endlessCreateAddress;
-
-  mapping(uint256 tokenId => EndlessData endlessData) private _endlessDataToTokenId; 
 
   error NonexistentToken();
   error SupplySoldOut();
   
 
-  constructor() ERC721("EndlessOriginPoint", "ENDLESSOP") Ownable() {}
+  constructor(Endless endlessAddress) ERC721("EndlessOriginPoint", "ENDLESSOP") Ownable() {}
 
 
-  function mint() external payable nonReentrant returns (uint256) {
+  function mint() external payable nonReentrant {
 
     if(_tokenId == MAX_SUPPLY) revert SupplySoldOut();
 
@@ -39,7 +34,7 @@ contract EndlessOriginPoint is ERC721, ReentrancyGuard, Ownable {
 
     address endlessAddress = EndlessCreate(_endlessCreateAddress).createNewEndless("", "", _msgSender());
 
-    _endlessDataToTokenId[_tokenId] = EndlessData({
+    endlessDataToTokenId[_tokenId] = EndlessData({
       owner: _msgSender(),
       endlessAddress: endlessAddress
     });
@@ -51,11 +46,23 @@ contract EndlessOriginPoint is ERC721, ReentrancyGuard, Ownable {
       revert NonexistentToken();
     }
 
-    return "";
+    return renderer.tokenURI(tokenId);
   }
 
   function setEndlessCreateAddress(EndlessCreate endlessCreateAddress) external onlyOwner {
     _endlessCreateAddress = endlessCreateAddress;
+  }
+
+
+  function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 /*batchSize*/) internal virtual override {
+    if(from != address(0)) {
+
+      endlessDataToTokenId[tokenId].owner = to;
+
+      address contractAddr = endlessDataToTokenId[tokenId].endlessAddress;
+
+      Endless(contractAddr).setNewOwner(to);
+    }
   }
 
 }
