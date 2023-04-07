@@ -5,17 +5,27 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import {EndlessDataStorage} from "./EndlessDataStorage.sol";
+import {IMetadataRenderer} from "./interfaces/IMetadataRenderer.sol";
+
 import {EndlessCreate} from "./EndlessCreate.sol";
 import {Endless} from "./Endless.sol";
 
 
-contract EndlessOriginPoint is ERC721, ReentrancyGuard, Ownable, EndlessDataStorage {
+contract EndlessOriginPoint is ERC721, ReentrancyGuard, Ownable {
 
   uint256 private _tokenId;
   uint256 private constant MAX_SUPPLY = 10;
 
+  struct EndlessData {
+    address owner;
+    address endlessAddress;
+  }
+
+  IMetadataRenderer public renderer;
   EndlessCreate private _endlessCreateAddress;
+
+  mapping(uint256 tokenId => EndlessData endlessData) public endlessDataToTokenId;
+
 
   error NonexistentToken();
   error SupplySoldOut();

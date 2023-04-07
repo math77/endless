@@ -1,54 +1,57 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.18;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {Endless} from "./Endless.sol";
-import {EndlessProxy} from "./EndlessProxy.sol";
 
 
-contract EndlessFactory is OwnableUpgradeable, UUPSUpgradeable {
+contract EndlessFactory {
 
-  address public immutable implementation;
+  using Clones for address;
+
+  address public immutable endlessImplementation;
   address private _endlessCreateAddress;
+
+  address public owner;
 
   error AddressCannotBeZero();
   error InvalidCaller();
+  error OnlyOwner();
 
+
+  modifier onlyOwner() {
+    if(msg.sender != owner) {
+      revert OnlyOwner();
+    }
+    _;
+  }
 
   modifier onlyEndlessCreateContract() { 
-    if(_msgSender() != _endlessCreateAddress) revert InvalidCaller();
+    if(msg.sender != _endlessCreateAddress) revert InvalidCaller();
     _; 
   }
 
-  constructor(address _implementation) initializer {
+  constructor(address _implementation) {
     if(_implementation == address(0)) revert AddressCannotBeZero();
 
-    implementation = _implementation;
+    endlessImplementation = _implementation;
   }
 
-  function initialize() external initializer {
-    __Ownable_init();
-    __UUPSUpgradeable_init();
-  }
 
-  function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {}
-
-  function createEndless(
+  function deployEndless(
     string memory endlessName,
     string memory endlessDescription,
     address initialOwner
-  ) external onlyEndlessCreateContract returns (address newEndlessAddress) {
-    EndlessProxy newEndless = new EndlessProxy(implementation, "");
+  ) external onlyEndlessCreateContract returns (address) {
+    address _newEndless = endlessImplementation.clone();
 
-    newEndlessAddress = address(newEndless);
-
-    Endless(newEndlessAddress).initialize({
+    Endless(_newEndless).initialize({
       _endlessName: endlessName,
       _endlessDescription: endlessDescription,
       _initialOwner: initialOwner
     });
+
+    return _newEndless;
   }
 
   function setEndlessCreateAddress(address endlessCreateAddress) external onlyOwner {

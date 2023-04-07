@@ -10,12 +10,14 @@ contract EndlessCreate is Ownable {
 
   EndlessFactory private _endlessFactoryAddress;
 
+  constructor() Ownable() {}
+
   function createNewEndless(
     string memory endlessName, 
     string memory endlessDescription,
     address initialOwner
   ) external returns (address newEndlessAddress) {
-    newEndlessAddress = EndlessFactory(_endlessFactoryAddress).createEndless(endlessName, endlessDescription, initialOwner);
+    newEndlessAddress = EndlessFactory(_endlessFactoryAddress).deployEndless(endlessName, endlessDescription, initialOwner);
   }
 
   function setEndlessFactoryAddress(EndlessFactory factoryAddr) external onlyOwner {
