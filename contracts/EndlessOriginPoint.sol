@@ -19,6 +19,7 @@ contract EndlessOriginPoint is ERC721, ReentrancyGuard, Ownable {
   struct EndlessData {
     address owner;
     address endlessAddress;
+    uint8 colorId;
   }
 
   IMetadataRenderer public renderer;
@@ -31,7 +32,7 @@ contract EndlessOriginPoint is ERC721, ReentrancyGuard, Ownable {
   error SupplySoldOut();
   
 
-  constructor(Endless endlessAddress) ERC721("EndlessOriginPoint", "ENDLESSOP") Ownable() {}
+  constructor() ERC721("EndlessOriginPoint", "ENDLESSOP") Ownable() {}
 
 
   function mint() external payable nonReentrant {
@@ -45,8 +46,9 @@ contract EndlessOriginPoint is ERC721, ReentrancyGuard, Ownable {
     address endlessAddress = EndlessCreate(_endlessCreateAddress).createNewEndless("", "", _msgSender());
 
     endlessDataToTokenId[_tokenId] = EndlessData({
-      owner: _msgSender(),
-      endlessAddress: endlessAddress
+      owner: msg.sender,
+      endlessAddress: endlessAddress,
+      colorId: uint8(uint256(keccak256(abi.encodePacked(block.timestamp, endlessAddress)))) % 6
     });
   }
 
@@ -56,11 +58,15 @@ contract EndlessOriginPoint is ERC721, ReentrancyGuard, Ownable {
       revert NonexistentToken();
     }
 
-    return renderer.tokenURI(tokenId);
+    return renderer.tokenURI(tokenId, endlessDataToTokenId[tokenId].colorId);
   }
 
   function setEndlessCreateAddress(EndlessCreate endlessCreateAddress) external onlyOwner {
     _endlessCreateAddress = endlessCreateAddress;
+  }
+
+  function setRenderer(IMetadataRenderer newRenderer) external onlyOwner {
+    renderer = newRenderer;
   }
 
 

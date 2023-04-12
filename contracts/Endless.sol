@@ -20,6 +20,7 @@ contract Endless is ERC721Upgradeable, ReentrancyGuardUpgradeable, OwnableSkelet
   struct EndlessData {
     address owner;
     address endlessAddress;
+    uint8 colorId;
   }
 
   IMetadataRenderer public renderer;
@@ -28,7 +29,6 @@ contract Endless is ERC721Upgradeable, ReentrancyGuardUpgradeable, OwnableSkelet
   mapping(uint256 tokenId => EndlessData endlessData) public endlessDataToTokenId;
 
   
-
   error NonexistentToken();
   error NotContractOwner();
   error SupplySoldOut();
@@ -65,7 +65,8 @@ contract Endless is ERC721Upgradeable, ReentrancyGuardUpgradeable, OwnableSkelet
 
     endlessDataToTokenId[_tokenId] = EndlessData({
       owner: msg.sender,
-      endlessAddress: endlessAddress
+      endlessAddress: endlessAddress,
+      colorId: uint8(uint256(keccak256(abi.encodePacked(block.timestamp, endlessAddress)))) % 6
     });
   }
 
@@ -75,11 +76,15 @@ contract Endless is ERC721Upgradeable, ReentrancyGuardUpgradeable, OwnableSkelet
       revert NonexistentToken();
     }
 
-    return renderer.tokenURI(tokenId);
+    return renderer.tokenURI(tokenId, endlessDataToTokenId[tokenId].colorId);
   }
 
   function setEndlessCreateAddress(EndlessCreate endlessCreateAddress) external onlyOwner {
     _endlessCreateAddress = endlessCreateAddress;
+  }
+
+  function setRenderer(IMetadataRenderer newRenderer) external onlyOwner {
+    renderer = newRenderer;
   }
 
   function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 /*batchSize*/) internal virtual override {
